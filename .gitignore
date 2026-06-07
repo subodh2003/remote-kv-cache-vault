@@ -1,0 +1,9 @@
+# Target binaries
+server/server
+client/client
+*.exe
+*.out
+
+# IDE configs
+.idea/
+.vscode/
