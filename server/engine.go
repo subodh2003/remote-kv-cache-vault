@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"hash/fnv"
 	"sync"
 )
 
@@ -10,7 +9,7 @@ const Bucketcnt = 256
 
 type Bucket struct {
 	mu    sync.RWMutex
-	items map[string][]byte
+	items map[uint32][]byte
 }
 
 type Vault struct {
@@ -21,19 +20,17 @@ func NewVault() *Vault {
 	v := &Vault{}
 	for i := 0; i < Bucketcnt; i++ {
 		v.buckets[i] = &Bucket{
-			items: make(map[string][]byte),
+			items: make(map[uint32][]byte),
 		}
 	}
 	return v
 }
 
-func (v *Vault) getBucketIndex(key string) int {
-	hasher := fnv.New32a()
-	hasher.Write([]byte(key))
-	return int(hasher.Sum32() % Bucketcnt)
+func (v *Vault) getBucketIndex(key uint32) int {
+	return int(key % Bucketcnt)
 }
 
-func (v *Vault) Store(key string, value []byte){
+func (v *Vault) Store(key uint32, value []byte){
 	idx:= v.getBucketIndex(key)
 	bucket := v.buckets[idx]
 	bucket.mu.Lock()
@@ -41,7 +38,7 @@ func (v *Vault) Store(key string, value []byte){
 	bucket.items[key] = value
 }
 
-func (v *Vault) Fetch(key string) ([]byte,error){
+func (v *Vault) Fetch(key uint32) ([]byte,error){
 	idx := v.getBucketIndex(key)
 	bucket:= v.buckets[idx]
 	bucket.mu.RLock()
@@ -54,7 +51,7 @@ func (v *Vault) Fetch(key string) ([]byte,error){
 	return value,nil
 }
 
-func (v *Vault) Swap(fkey string, skey string, svalue []byte) ([]byte, error){
+func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error){
 	fidx := v.getBucketIndex(fkey)
 	sidx := v.getBucketIndex(skey)
 

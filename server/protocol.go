@@ -7,15 +7,15 @@ import (
 )
 
 const (
-    Swapflag = 0
-    Storeflag = 1
-    Fetchflag = 2
+    Swapflag uint8 = 0
+    Storeflag uint8 = 1
+    Fetchflag uint8 = 2
 )
 
 type Request struct{
     Flag uint8
-    Fkey string
-    Skey string
+    Fkey uint32
+    Skey uint32
     Value []byte
 }
 
@@ -29,18 +29,12 @@ func Parserequest(r io.Reader) (*Request, error){
 
     switch flag{
     case Storeflag:
-        headerbuf := make([]byte, 6)
-        if _,err := io.ReadFull(r, headerbuf); err != nil{
+        buff := make([]byte, 8)
+        if _,err := io.ReadFull(r, buff); err != nil{
             return nil,err
         }
-        slen := binary.BigEndian.Uint16(headerbuf[0:2])
-        vlen := binary.BigEndian.Uint64(headerbuf[2:6])
-
-        skeybuf := make([]byte, slen)
-        if _,err := io.ReadFull(r,skeybuf); err != nil{
-            return nil,err
-        }
-        req.Skey = string(skeybuf)
+        req.Skey := binary.BigEndian.Uint32(buff[0:4])
+        vlen := binary.BigEndian.Uint64(buff[4:8])
 
         vbuf := make([]byte, vlen)
         if _,err:= io.ReadFull(r, vbuf); err != nil{
@@ -49,38 +43,20 @@ func Parserequest(r io.Reader) (*Request, error){
         req.Value = vbuf
 
     case Fetchflag:
-        headerbuf := make([]byte, 2)
-        if _,err := io.ReadFull(r, headerbuf); err != nil{
+        buff := make([]byte, 2)
+        if _,err := io.ReadFull(r, buff); err != nil{
             return nil,err
         }
-        flen := binary.BigEndian.Uint16(headerbuf[0:2])
-
-        fbuf := make([]byte, flen)
-        if _,err := io.ReadFull(r,fbuf); err!= nil{
-            return nil,err
-        }
-        req.Fkey = string(fbuf)
+        req.Fkey := binary.BigEndian.Uint16(buff[0:4])
 
     case Swapflag:
-        headerbuf := make([]byte, 8)
-        if _,err := io.ReadFull(r, headerbuf); err != nil{
+        buff := make([]byte, 12)
+        if _,err := io.ReadFull(r, buff); err != nil{
             return nil,err
         }
-        flen := binary.BigEndian.Uint16(headerbuf[0:2])
-        slen := binary.BigEndian.Uint16(headerbuf[2:4])
-        vlen := binary.BigEndian.Uint32(headerbuf[4:8])
-
-        fbuf := make([]byte, flen)
-        if _,err := io.ReadFull(r, fbuf); err!= nil{
-            return nil,err
-        }
-        req.Fkey = string(fbuf)
-
-        sbuf := make([]byte, slen)
-        if _,err := io.ReadFull(r, sbuf); err!= nil{
-            return nil,err
-        }
-        req.Skey = string(sbuf)
+        req.Fkey := binary.BigEndian.Uint16(buff[0:4])
+        req.Skey := binary.BigEndian.Uint16(buff[4:8])
+        vlen := binary.BigEndian.Uint32(buff[8:12])
         
         vbuf := make([]byte, vlen)
         if _,err := io.ReadFull(r, vbuf); err!= nil{
