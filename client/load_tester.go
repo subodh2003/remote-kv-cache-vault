@@ -18,7 +18,7 @@ func main() {
 	opsPerPeer := flag.Int("ops", 100, "no. ops per peer")
 	flag.Parse()
 
-	target := fmt.Sprintf("%s:%v", serverAddr, serverPort)
+	target := fmt.Sprintf("%s:%v", *serverAddr, *serverPort)
 	fmt.Printf("Starting network benchmark against %s (Active peers: %d)\n", target, *maxPeers)
 
 	var wg sync.WaitGroup
