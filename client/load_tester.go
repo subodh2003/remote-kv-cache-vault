@@ -53,10 +53,21 @@ func main() {
 				switch state {
 				case Storeflag:
 					err = executestore(conn, skey, svalue)
+					if err == nil {
+						log.Printf("[Peer %d] Op %d -> STORE Success: Saved key %d", peerid, op, skey)
+					}
 				case Fetchflag:
-					_, err = executefetch(conn, fkey)
+					var data []byte
+					data, err = executefetch(conn, fkey)
+					if err == nil {
+						log.Printf("[Peer %d] Op %d -> FETCH Hit: Retrieved %d bytes from key %d", peerid, op, len(data), fkey)
+					}
 				case Swapflag:
-					_, err = executeswap(conn, fkey, skey, svalue)
+					var data []byte
+					data, err = executeswap(conn, fkey, skey, svalue)
+					if err == nil {
+						log.Printf("[Peer %d] Op %d -> SWAP Hit: Swapped eviction key %d for fetch key %d (%d bytes returned)", peerid, op, skey, fkey, len(data))
+					}
 				}
 
 				if err != nil {
