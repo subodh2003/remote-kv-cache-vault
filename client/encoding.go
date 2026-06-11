@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"fmt"
 )
 
 const (
@@ -32,20 +33,36 @@ func executestore(w io.ReadWriter, key uint32, value []byte) error{
 }
 
 func executefetch(w io.ReadWriter, key uint32) ([]byte, error){
-	header := make([]byte,5)
+	// Header size is correct
+	header := make([]byte, 5)
 	header[0] = Fetchflag
-	binary.BigEndian.PutUint32(header[1:5],key)
-	w.Write(header)
-	
-	ackvalue := make([]byte,5)
-	io.ReadFull(w,ackvalue)
-	if ackvalue[0]!=1{
-		return nil,errors.New("Error: Cache miss")
+	binary.BigEndian.PutUint32(header[1:5], key)
+	if _, err := w.Write(header); err != nil {
+		return nil, err
 	}
-	size := binary.BigEndian.Uint32(ackvalue[1:5])
+
+	status := make([]byte, 1)
+	if _, err := io.ReadFull(w, status); err != nil {
+		// If the server connection drops, we handle the error safely.
+		return nil, fmt.Errorf("connection read error on status flag: %v", err)
+	}
+	
+	if status[0] == 0 {
+		return nil, errors.New("error: block cache miss")
+	}
+
+	sizeBuf := make([]byte, 4)
+	if _, err := io.ReadFull(w, sizeBuf); err != nil {
+		return nil, fmt.Errorf("connection read error on payload size: %v", err)
+	}
+	size := binary.BigEndian.Uint32(sizeBuf)
+	
 	buff := make([]byte, size)
-	io.ReadFull(w,buff)
-	return buff,nil
+	if _, err := io.ReadFull(w, buff); err != nil {
+		return nil, fmt.Errorf("connection read error on payload body: %v", err)
+	}
+	
+	return buff, nil
 }
 
 func executeswap(w io.ReadWriter, fkey uint32, skey uint32, svalue []byte) ([]byte,error){
@@ -59,12 +76,15 @@ func executeswap(w io.ReadWriter, fkey uint32, skey uint32, svalue []byte) ([]by
 	w.Write(header)
 	w.Write(svalue)
 
-	ackvalue := make([]byte,5)
-	io.ReadFull(w,ackvalue)
-	if ackvalue[0]!=1{
-		return nil,errors.New("Error: Cache miss")
+	status := make([]byte, 1)
+	io.ReadFull(w,status)
+	if status[0] != 1{
+		return nil, errors.New("Error: Cache miss")
 	}
-	size := binary.BigEndian.Uint32(ackvalue[1:5])
+
+	ackvalue := make([]byte,4)
+	io.ReadFull(w,ackvalue)
+	size := binary.BigEndian.Uint32(ackvalue)
 	buff := make([]byte, size)
 	io.ReadFull(w,buff)
 	return buff,nil

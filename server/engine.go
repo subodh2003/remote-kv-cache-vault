@@ -55,15 +55,25 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 	fidx := v.getBucketIndex(fkey)
 	sidx := v.getBucketIndex(skey)
 
-	if fidx == sidx {
-		bucket := v.buckets[fidx]
-		bucket.mu.Lock()
-		defer bucket.mu.Unlock()
+	var firstLock, secondLock *sync.RWMutex
+	if fidx < sidx {
+		firstLock = &v.buckets[fidx].mu
+		secondLock = &v.buckets[sidx].mu
+	} else {
+		firstLock = &v.buckets[sidx].mu
+		secondLock = &v.buckets[fidx].mu
+	}
 
+	if fidx == sidx {
+		firstLock.Lock() 
+		defer firstLock.Unlock()
+
+		bucket := v.buckets[fidx]
 		fvalue, fstatus := bucket.items[fkey]
 		if !fstatus {
 			return nil, errors.New("swap error: fetch key not found in vault")
 		}
+
 		bucket.items[skey] = svalue
 		if fkey != skey {
 			delete(bucket.items, fkey)
@@ -71,21 +81,18 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 		return fvalue, nil
 	}
 
-	if fidx < sidx {
-		v.buckets[fidx].mu.Lock()
-		v.buckets[sidx].mu.Lock()
-	} else {
-		v.buckets[sidx].mu.Lock()
-		v.buckets[fidx].mu.Lock()
-	}
-	defer v.buckets[fidx].mu.Unlock()
-	defer v.buckets[sidx].mu.Unlock()
+	firstLock.Lock()
+	secondLock.Lock()
+	defer firstLock.Unlock()
+	defer secondLock.Unlock()
 
 	fvalue, fstatus := v.buckets[fidx].items[fkey]
 	if !fstatus {
 		return nil, errors.New("swap error: fetch key not found in vault")
 	}
+
 	v.buckets[sidx].items[skey] = svalue
 	delete(v.buckets[fidx].items, fkey)
+
 	return fvalue, nil
 }
