@@ -61,9 +61,12 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 		defer bucket.mu.Unlock()
 
 		fvalue, fstatus := bucket.items[fkey]
-		bucket.items[skey] = svalue
 		if !fstatus {
 			return nil, errors.New("swap error: fetch key not found in vault")
+		}
+		bucket.items[skey] = svalue
+		if fkey != skey {
+			delete(bucket.items, fkey)
 		}
 		return fvalue, nil
 	}
@@ -79,9 +82,10 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 	defer v.buckets[sidx].mu.Unlock()
 
 	fvalue, fstatus := v.buckets[fidx].items[fkey]
-	v.buckets[sidx].items[skey] = svalue
 	if !fstatus {
 		return nil, errors.New("swap error: fetch key not found in vault")
 	}
+	v.buckets[sidx].items[skey] = svalue
+	delete(v.buckets[fidx].items, fkey)
 	return fvalue, nil
 }

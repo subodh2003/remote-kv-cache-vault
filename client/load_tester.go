@@ -60,8 +60,9 @@ func main() {
 				}
 
 				if err != nil {
-					log.Printf("[Peer %d] Op %d failed: %v", peerid, op, err)
-					 // Abort this session on network fault
+					// log.Printf("[Peer %d] Op %d failed: %v", peerid, op, err)
+					//  // Abort this session on network fault
+					continue
 				}
 			}
 
