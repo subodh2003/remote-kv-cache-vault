@@ -30,28 +30,28 @@ func (v *Vault) getBucketIndex(key uint32) int {
 	return int(key % Bucketcnt)
 }
 
-func (v *Vault) Store(key uint32, value []byte){
-	idx:= v.getBucketIndex(key)
+func (v *Vault) Store(key uint32, value []byte) {
+	idx := v.getBucketIndex(key)
 	bucket := v.buckets[idx]
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	bucket.items[key] = value
 }
 
-func (v *Vault) Fetch(key uint32) ([]byte,error){
+func (v *Vault) Fetch(key uint32) ([]byte, error) {
 	idx := v.getBucketIndex(key)
-	bucket:= v.buckets[idx]
+	bucket := v.buckets[idx]
 	bucket.mu.RLock()
-	defer bucket.mu.Unlock()
+	defer bucket.mu.RUnlock() // Corrected to RUnlock()
 
-	value,fstatus:= bucket.items[key]
-	if !fstatus{
-		return nil,errors.New("error: block cache miss")
+	value, fstatus := bucket.items[key]
+	if !fstatus {
+		return nil, errors.New("error: block cache miss")
 	}
-	return value,nil
+	return value, nil
 }
 
-func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error){
+func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 	fidx := v.getBucketIndex(fkey)
 	sidx := v.getBucketIndex(skey)
 
@@ -60,29 +60,28 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error){
 		bucket.mu.Lock()
 		defer bucket.mu.Unlock()
 
-		fvalue, fstatus:= bucket.items[fkey]
+		fvalue, fstatus := bucket.items[fkey]
 		bucket.items[skey] = svalue
-		if !fstatus{
-			return nil,errors.New("swap error: fetch key not found in vault")
+		if !fstatus {
+			return nil, errors.New("swap error: fetch key not found in vault")
 		}
-		return fvalue,nil
+		return fvalue, nil
 	}
 
-	if fidx < sidx{
+	if fidx < sidx {
 		v.buckets[fidx].mu.Lock()
 		v.buckets[sidx].mu.Lock()
-	} else{
+	} else {
 		v.buckets[sidx].mu.Lock()
 		v.buckets[fidx].mu.Lock()
 	}
 	defer v.buckets[fidx].mu.Unlock()
 	defer v.buckets[sidx].mu.Unlock()
 
-	fvalue , fstatus:= v.buckets[fidx].items[fkey]
+	fvalue, fstatus := v.buckets[fidx].items[fkey]
 	v.buckets[sidx].items[skey] = svalue
 	if !fstatus {
 		return nil, errors.New("swap error: fetch key not found in vault")
-	} 
-	return fvalue,nil
+	}
+	return fvalue, nil
 }
-

@@ -34,7 +34,7 @@ func Parserequest(r io.Reader) (*Request, error) {
 			return nil, err
 		}
 		req.Skey = binary.BigEndian.Uint32(buff[0:4])
-		vlen := binary.BigEndian.Uint64(buff[4:8])
+		vlen := binary.BigEndian.Uint32(buff[4:8])
 
 		vbuf := make([]byte, vlen)
 		if _, err := io.ReadFull(r, vbuf); err != nil {
@@ -43,7 +43,7 @@ func Parserequest(r io.Reader) (*Request, error) {
 		req.Value = vbuf
 
 	case Fetchflag:
-		buff := make([]byte, 2)
+		buff := make([]byte, 4)
 		if _, err := io.ReadFull(r, buff); err != nil {
 			return nil, err
 		}

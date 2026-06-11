@@ -61,7 +61,7 @@ func handleclient(conn net.Conn, vault *Vault) {
 			fvalue, err := vault.Fetch(req.Fkey)
 			if err != nil {
 				conn.Write([]byte{0})
-				return
+				continue
 			}
 			responsebuf := make([]byte, 5)
 			responsebuf[0] = 1
@@ -78,7 +78,7 @@ func handleclient(conn net.Conn, vault *Vault) {
 			swapvalue, err := vault.Swap(req.Fkey, req.Skey, req.Value)
 			if err != nil {
 				conn.Write([]byte{0})
-				return
+				continue
 			}
 			responsebuf := make([]byte, 5)
 			responsebuf[0] = 1

@@ -61,7 +61,7 @@ func main() {
 
 				if err != nil {
 					log.Printf("[Peer %d] Op %d failed: %v", peerid, op, err)
-					return // Abort this session on network fault
+					 // Abort this session on network fault
 				}
 			}
 
