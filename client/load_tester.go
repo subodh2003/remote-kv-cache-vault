@@ -38,7 +38,7 @@ func main() {
 			}
 			defer conn.Close()
 
-			svalue := make([]byte, 1024*1024)
+			svalue := make([]byte, 1024)
 			rng.Read(svalue)
 			for op := 0; op < *opsPerPeer; op++ {
 				state := uint8(rng.Intn(3))

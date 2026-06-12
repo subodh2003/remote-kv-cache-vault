@@ -23,7 +23,7 @@ func NewVault() *Vault {
 			items: make(map[uint32][]byte),
 		}
 	}
-	dummyValue := make([]byte, 1024*1024)
+	dummyValue := make([]byte, 1024)
 	for i := 0 ; i < 1000; i++ {
 		randomKey := uint32(i) 
 		idx := v.getBucketIndex(randomKey)
