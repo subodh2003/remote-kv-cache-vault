@@ -42,7 +42,7 @@ func handleclient(conn net.Conn, vault *Vault) {
 	defer conn.Close()
 	remoteAddr := conn.RemoteAddr().String()
 	log.Printf("[Server] New connection established from remote client: %s", remoteAddr)
-	
+
 	defer func() {
 		log.Printf("[Server] Connection closed for client: %s", remoteAddr)
 		conn.Close()

@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const (
+	Blocksize  = 1024
+	NoOfblocks = 10000
+)
+
 func main() {
 	serverAddr := flag.String("addr", "127.0.0.1", "IP addr of remote vault")
 	serverPort := flag.Int("port", 8080, "Port of remote vault")
@@ -38,15 +43,15 @@ func main() {
 			}
 			defer conn.Close()
 
-			svalue := make([]byte, 1024)
+			svalue := make([]byte, Blocksize)
 			rng.Read(svalue)
 			for op := 0; op < *opsPerPeer; op++ {
 				state := uint8(rng.Intn(3))
-				fkey := uint32(rng.Intn(10000))
-				skey := uint32(rng.Intn(10000))
+				fkey := uint32(rng.Intn(NoOfblocks))
+				skey := uint32(rng.Intn(NoOfblocks))
 
 				if fkey == skey {
-					skey = (fkey + 1) % 10000
+					skey = (fkey + 1) % NoOfblocks
 				}
 
 				var err error

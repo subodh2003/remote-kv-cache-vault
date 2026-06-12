@@ -5,7 +5,11 @@ import (
 	"sync"
 )
 
-const Bucketcnt = 256
+const (
+	Bucketcnt  = 256
+	Blocksize  = 1024
+	NoOfblocks = 10000
+)
 
 type Bucket struct {
 	mu    sync.RWMutex
@@ -23,11 +27,11 @@ func NewVault() *Vault {
 			items: make(map[uint32][]byte),
 		}
 	}
-	dummyValue := make([]byte, 1024)
-	for i := 0 ; i < 1000; i++ {
-		randomKey := uint32(i) 
+	dummyValue := make([]byte, Blocksize)
+	for i := 0; i < NoOfblocks; i++ {
+		randomKey := uint32(i)
 		idx := v.getBucketIndex(randomKey)
-				v.buckets[idx].items[randomKey] = dummyValue
+		v.buckets[idx].items[randomKey] = dummyValue
 	}
 	return v
 }
@@ -71,7 +75,7 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 	}
 
 	if fidx == sidx {
-		firstLock.Lock() 
+		firstLock.Lock()
 		defer firstLock.Unlock()
 
 		bucket := v.buckets[fidx]
