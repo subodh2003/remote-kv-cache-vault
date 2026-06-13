@@ -19,7 +19,7 @@ const (
 func main() {
 	serverAddr := flag.String("addr", "127.0.0.1", "IP addr of remote vault")
 	serverPort := flag.Int("port", 8080, "Port of remote vault")
-	maxPeers := flag.Int("peers", 50, "No of peers simulating gpu streams")
+	maxPeers := flag.Int("peers", 10, "No of peers simulating gpu streams")
 	opsPerPeer := flag.Int("ops", 100, "no. ops per peer")
 	flag.Parse()
 
