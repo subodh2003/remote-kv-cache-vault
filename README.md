@@ -15,7 +15,7 @@ remote-kv-cache-vault/
     ├── load_tester.go    # Parallel multi-peer load driver
     └── encoding.go       # Protocol frame encoders
 
-#How to run the server
+```## How to run the server
 1. Start the server first ->
 $ go run server/*.go -addr 0.0.0.0 -port <default 8080>
 
