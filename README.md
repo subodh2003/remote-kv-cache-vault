@@ -26,6 +26,7 @@ Concurrent Clients : 1000
 Throughput         : 70,560 req/s
 Protocol           : Custom Binary over TCP
 Storage Shards     : 256
+```
 ## How to run the server
 1. Start the server first ->
 ```bash
