@@ -14,7 +14,18 @@ remote-kv-cache-vault/
 └── client/
     ├── load_tester.go    # Parallel multi-peer load driver
     └── encoding.go       # Protocol frame encoders
+
+    
 ```
+## Performance & Benchmarks
+
+The storage engine uses memory sharding to reduce lock contention under heavy parallel workloads. The following metrics were captured during a high-concurrency stress test:
+
+```text
+Concurrent Clients : 1000
+Throughput         : 70,560 req/s
+Protocol           : Custom Binary over TCP
+Storage Shards     : 256
 ## How to run the server
 1. Start the server first ->
 ```bash
