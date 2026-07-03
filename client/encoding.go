@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 )
 
+// Shared Constants
 const (
 	Swapflag  uint8 = 0
 	Storeflag uint8 = 1
@@ -25,7 +25,9 @@ func executestore(w io.ReadWriter, key uint32, value []byte) error {
 	w.Write(value)
 
 	ack := make([]byte, 1)
-	io.ReadFull(w, ack)
+	if _, err := io.ReadFull(w, ack); err != nil {
+		return err
+	}
 	if ack[0] != 1 {
 		return errors.New("Error: Store action failed")
 	}
@@ -33,7 +35,6 @@ func executestore(w io.ReadWriter, key uint32, value []byte) error {
 }
 
 func executefetch(w io.ReadWriter, key uint32) ([]byte, error) {
-	// Header size is correct
 	header := make([]byte, 5)
 	header[0] = Fetchflag
 	binary.BigEndian.PutUint32(header[1:5], key)
@@ -43,23 +44,21 @@ func executefetch(w io.ReadWriter, key uint32) ([]byte, error) {
 
 	status := make([]byte, 1)
 	if _, err := io.ReadFull(w, status); err != nil {
-		// If the server connection drops, we handle the error safely.
-		return nil, fmt.Errorf("connection read error on status flag: %v", err)
+		return nil, err
 	}
 
 	if status[0] == 0 {
 		return nil, errors.New("error: block cache miss")
 	}
 
-	sizeBuf := make([]byte, 4)
-	if _, err := io.ReadFull(w, sizeBuf); err != nil {
-		return nil, fmt.Errorf("connection read error on payload size: %v", err)
+	var size uint32
+	if err := binary.Read(w, binary.BigEndian, &size); err != nil {
+		return nil, err
 	}
-	size := binary.BigEndian.Uint32(sizeBuf)
 
 	buff := make([]byte, size)
 	if _, err := io.ReadFull(w, buff); err != nil {
-		return nil, fmt.Errorf("connection read error on payload body: %v", err)
+		return nil, err
 	}
 
 	return buff, nil
@@ -77,15 +76,20 @@ func executeswap(w io.ReadWriter, fkey uint32, skey uint32, svalue []byte) ([]by
 	w.Write(svalue)
 
 	status := make([]byte, 1)
-	io.ReadFull(w, status)
+	if _, err := io.ReadFull(w, status); err != nil {
+		return nil, err
+	}
 	if status[0] != 1 {
 		return nil, errors.New("Error: Cache miss")
 	}
 
-	ackvalue := make([]byte, 4)
-	io.ReadFull(w, ackvalue)
-	size := binary.BigEndian.Uint32(ackvalue)
+	var size uint32
+	if err := binary.Read(w, binary.BigEndian, &size); err != nil {
+		return nil, err
+	}
 	buff := make([]byte, size)
-	io.ReadFull(w, buff)
+	if _, err := io.ReadFull(w, buff); err != nil {
+		return nil, err
+	}
 	return buff, nil
 }

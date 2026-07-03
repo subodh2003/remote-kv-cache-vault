@@ -3,11 +3,12 @@ package main
 import (
 	"errors"
 	"sync"
+	"sync/atomic" // New import for thread-safe counters
 )
 
 const (
 	Bucketcnt  = 256
-	Blocksize  = 1024
+	Blocksize  = 1024 // Set to 1KB for consistency
 	NoOfblocks = 10000
 )
 
@@ -18,6 +19,12 @@ type Bucket struct {
 
 type Vault struct {
 	buckets [Bucketcnt]*Bucket
+	// NEW: Atomic counters for telemetry
+	StoreCount uint64
+	FetchHit   uint64
+	FetchMiss  uint64
+	SwapHit    uint64
+	SwapMiss   uint64
 }
 
 func NewVault() *Vault {
@@ -27,6 +34,7 @@ func NewVault() *Vault {
 			items: make(map[uint32][]byte),
 		}
 	}
+	// Warmed-state assumption: Populate with stable 1KB payloads
 	dummyValue := make([]byte, Blocksize)
 	for i := 0; i < NoOfblocks; i++ {
 		randomKey := uint32(i)
@@ -46,18 +54,25 @@ func (v *Vault) Store(key uint32, value []byte) {
 	bucket.mu.Lock()
 	defer bucket.mu.Unlock()
 	bucket.items[key] = value
+
+	// Increment Store counter
+	atomic.AddUint64(&v.StoreCount, 1)
 }
 
 func (v *Vault) Fetch(key uint32) ([]byte, error) {
 	idx := v.getBucketIndex(key)
 	bucket := v.buckets[idx]
 	bucket.mu.RLock()
-	defer bucket.mu.RUnlock() // Corrected to RUnlock()
+	defer bucket.mu.RUnlock()
 
 	value, fstatus := bucket.items[key]
 	if !fstatus {
+		// Increment Fetch Miss
+		atomic.AddUint64(&v.FetchMiss, 1)
 		return nil, errors.New("error: block cache miss")
 	}
+	// Increment Fetch Hit
+	atomic.AddUint64(&v.FetchHit, 1)
 	return value, nil
 }
 
@@ -81,6 +96,8 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 		bucket := v.buckets[fidx]
 		fvalue, fstatus := bucket.items[fkey]
 		if !fstatus {
+			// Increment Swap Miss
+			atomic.AddUint64(&v.SwapMiss, 1)
 			return nil, errors.New("swap error: fetch key not found in vault")
 		}
 
@@ -88,6 +105,8 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 		if fkey != skey {
 			delete(bucket.items, fkey)
 		}
+		// Increment Swap Hit
+		atomic.AddUint64(&v.SwapHit, 1)
 		return fvalue, nil
 	}
 
@@ -98,11 +117,13 @@ func (v *Vault) Swap(fkey uint32, skey uint32, svalue []byte) ([]byte, error) {
 
 	fvalue, fstatus := v.buckets[fidx].items[fkey]
 	if !fstatus {
+		atomic.AddUint64(&v.SwapMiss, 1)
 		return nil, errors.New("swap error: fetch key not found in vault")
 	}
 
 	v.buckets[sidx].items[skey] = svalue
 	delete(v.buckets[fidx].items, fkey)
 
+	atomic.AddUint64(&v.SwapHit, 1)
 	return fvalue, nil
 }
