@@ -53,6 +53,4 @@ def test_swap_same_key_overwrites_without_deleting(client_socket, unique_key):
 
     # fkey == skey, so the delete step must not fire — the key should still
     # exist, now holding the new value.
-    assert fetch(client_socket, key) == new_valuegit add qafiles/
-git commit -m "Add pytest QA automation layer: STORE/FETCH/SWAP validation over TCP"
-git push
+    assert fetch(client_socket, key) == new_value
